@@ -16,5 +16,5 @@ public class GameStateManager : SingletonPersistant<GameStateManager>
 	private void Start()
 	{
 
-	}
+    }
 }

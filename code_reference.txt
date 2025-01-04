@@ -1,0 +1,786 @@
+#ammo_controller.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ammo_controller : MonoBehaviour 
+{
+	public float damage = 5f;
+	public float distanceMax = 10f;
+	public string myAmmoType = "silverBullet";
+
+	private bool shoot;
+	private float CalculatedDamage;
+	private float mySpeed;
+	private Vector2 startPos;
+	private Vector2 shootVector;
+
+	private Rigidbody2D rb2d;
+
+	public void shootAmmo(float damageMultiplier, float speed, string ammoType, Vector2 playerLookVector)
+	{
+		if (ammoType == myAmmoType && shoot == false)
+		{
+			CalculatedDamage = damage * damageMultiplier;
+			mySpeed = speed;
+			startPos = this.transform.position;
+			shootVector = playerLookVector;
+			shoot = true;
+		}
+	}
+
+	void FixedUpdate()
+	{
+		if (shoot == true)
+		{
+			float distance = Vector2.Distance(startPos,this.transform.position);
+			if (distance > distanceMax)
+			{
+				Object.Destroy (this.gameObject);
+			} 
+			else
+			{
+				rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude (shootVector, 1) * Time.deltaTime * mySpeed));
+			}
+		}
+	}
+
+	void Start () 
+	{
+		rb2d = this.GetComponent<Rigidbody2D>();
+	}
+
+	void OnTriggerEnter2D(Collider2D other)
+	{
+		if (other.gameObject.tag == "Player" || other.gameObject.tag == "Enemy")
+		{
+			health_controller healthScript = other.transform.root.GetComponent<health_controller> ();
+			if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
+			{
+				healthScript.addHealth (CalculatedDamage);
+			}
+		}
+		Object.Destroy (this.gameObject);
+	}
+}
+
+
+#Arm_controller.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Arm_controller : MonoBehaviour {
+
+	private float startRotation;
+	private float endRotation;
+	private bool isSwinging;
+
+	public void swing(float swingRange, float swingSpeed, string weaponTag)
+	{
+		if (isSwinging == false)
+		{
+			isSwinging = true;
+			startRotation = (this.transform.rotation.z - swingRange / 2); //start swigning sword (half of swing range) back from where it is now.
+			endRotation = (startRotation + swingRange); //end swing after swing has gone its entire range.
+		}
+	}
+			
+}
+
+
+#Arm_rotation.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Arm_rotation : MonoBehaviour {
+
+	//private string direction = "down";
+	private float pxWidth = 0.0625f; //pixel size
+	private int armOffsetNormalY = -0; //in pixels
+	private int armOffsetflopY = -0; //in pixels
+	private int armOffsetNormalX = -0; //in pixels
+	private float armOffsetFlopX = 6; //in pixels
+
+	private bool armRotateOn = true;
+
+	private SpriteRenderer sprite;
+
+	void lookAtDir(float rotation) //Determine the direction char/arm is aiming. Flop/layer the arm accordiningly.
+	{
+		if (rotation < 45 && rotation > -45)//1:30 -> 4:30, char looking right. 
+		{
+			transform.localScale = new Vector3(1, 1, 1);
+			sprite.sortingOrder = 4;
+			transform.localPosition = new Vector2 (armOffsetNormalX, armOffsetNormalY)*pxWidth;
+		} 
+		else if (rotation < -45 && rotation > -100)//4:30 -> 7:30, char looking down. 
+		{
+			transform.localScale = new Vector3(1, 1, 1);
+			sprite.sortingOrder = 4;
+			transform.localPosition = new Vector2 (armOffsetNormalX, armOffsetNormalY)*pxWidth;
+		} 
+		else if (rotation < 135 && rotation > 45) //char looking up
+		{
+			transform.localScale = new Vector3(1, -1, 1);
+			sprite.sortingOrder = 1;
+			transform.localPosition = new Vector2 (armOffsetFlopX, armOffsetflopY)*pxWidth;
+		} 
+		else //char looking left
+		{
+			transform.localScale = new Vector3(1, -1, 1);
+			sprite.sortingOrder = 0;
+			transform.localPosition = new Vector2 (armOffsetNormalX, armOffsetNormalY)*pxWidth;
+		}
+	}
+
+	void Start()
+	{
+		sprite = GetComponent<SpriteRenderer> ();
+	}
+
+	void setRotation() //Based on mouse position, set the rotation of the arm (aim at mouse).
+	{
+		Vector3 difference = Camera.main.ScreenToWorldPoint (Input.mousePosition) - transform.root.position; //difference between mouse pos and character.
+		difference.Normalize(); //make 0-1
+		float rotationZ = Mathf.Atan2 (difference.y, difference.x) * Mathf.Rad2Deg; //find angle in degrees
+		transform.rotation = Quaternion.Euler (0f, 0f, rotationZ);
+		lookAtDir (rotationZ);
+	}
+
+	void Update () 
+	{
+		if (armRotateOn)
+		{
+			setRotation ();
+		} 
+		else
+		{
+			transform.rotation = Quaternion.Euler (0f, 0f, 0f); //dont really need this set every frame...
+		}
+	}
+}
+
+
+#AudioManager.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AudioManager : MonoBehaviour {
+
+	// Use this for initialization
+	void Start () {
+		
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+}
+
+
+#Camera_controller.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Camera_controller : MonoBehaviour {
+
+	// Use this for initialization
+	void Start () {
+		
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+}
+
+
+#DeathAnimation.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DeathAnimation : MonoBehaviour 
+{
+	//public Animation anim;
+	IEnumerator Start() 
+	{
+		GetComponent<Animator>().Play("explosion");
+		yield return new WaitForSeconds(.65f);
+		Object.Destroy (this.gameObject);
+	}
+
+}
+
+
+#DungeonMob01_controller.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DungeonMob01_controller : MonoBehaviour {
+
+	public float mySpeed = 2f;
+	public float jumpSpeed = 3f;
+	public float collideDamage = -6f;
+	public float DamageMultiplier = 5f;
+	public string AmmoType = "greenMagic";
+	public float AmmoSpeed = 8f;
+	public float FireRate = .5f;
+	public float TimeBetweenRandomStates = 2f;
+
+	private GameObject player;
+	private GameObject obsticle;
+	private Rigidbody2D rb2d;
+	private Animator anim;
+	private float currentSpeed;
+	private string state;
+	private float shootTimer = 0;
+	private float stateTimer = 0;
+	private float randomMoveTimer = 0;
+	private Vector2 movement_vector;
+	private List<string> randomActions = new List<string>(new string[] { "chasePlayer", "runAway", "moveRandom" });
+
+	private Transform childWithTag(string tag)
+	{
+		Transform childFound = null;
+		foreach (Transform child in transform)
+			if (child.CompareTag (tag))
+			{
+				childFound = child;
+			} 
+		if (childFound == null)
+		{
+			Debug.Log("no child found");
+		}
+		return childFound;
+	}
+
+	Vector2 lookAtPlayer()
+	{
+		Vector2 difference = player.transform.position - transform.root.position - new Vector3(0,.5f,0); //difference between mouse pos and character.
+		difference.Normalize(); //make 0-1
+		return new Vector2 (difference.x,difference.y);
+	}
+
+	float DistanceFromPlayer()
+	{
+		return Vector2.Distance(player.transform.position, transform.root.position);
+	}
+
+	private void chasePlayer()
+	{
+		if (DistanceFromPlayer() < 2f && DistanceFromPlayer() > 0f ) //slow down during approach
+		{
+			movement_vector = lookAtPlayer ();
+			rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed/1.7f));
+		}
+
+		if (DistanceFromPlayer() > 1f && DistanceFromPlayer() > 2f)
+		{
+			movement_vector = lookAtPlayer ();
+			rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed));
+		}
+	}
+	private IEnumerator jump()
+	{
+		anim.Play ("mob_jump_anim");
+		currentSpeed = jumpSpeed;
+		this.gameObject.layer = 12; //Jumping layer
+		yield return new WaitForSeconds(.9f);
+		currentSpeed = mySpeed;
+		this.gameObject.layer = 8; //Normal player layer
+	}
+
+	private void shootPlayer()
+	{
+		if (Time.time > shootTimer) //timer is up
+		{
+			shootTimer = Time.time + FireRate; //add time to timer
+			Transform shootFrom = childWithTag ("ShootFrom");
+			GameObject bullet = (GameObject)Instantiate (Resources.Load ("prefabs/ammo/ammo_" + AmmoType));
+			Physics2D.IgnoreCollision (bullet.GetComponent<Collider2D> (), GetComponent<Collider2D> (), true);
+			bullet.transform.position = shootFrom.position;
+			bullet.GetComponent<ammo_controller> ().shootAmmo (DamageMultiplier, AmmoSpeed, AmmoType, lookAtPlayer ());
+		}
+	}
+	private void moveRandom() //randomly move a direction
+	{
+		if (Time.time > randomMoveTimer) //timer is up, change directions.
+		{
+			randomMoveTimer = Time.time + 1f; //add time to timer
+			movement_vector = new Vector2 (Random.Range (-1f, 1f),Random.Range (-1f, 1f)); //pick random x,y coordinates
+			movement_vector.Normalize(); //make 0-1
+		}
+		rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed));
+	}
+
+	void OnCollisionEnter2D(Collision2D other)
+	{
+		if (other.gameObject.layer == 11 || other.gameObject.layer == 9) //if on jumpable layer
+		{
+			StartCoroutine(jump ());
+		}
+		if (other.gameObject.tag == "Player")
+		{
+			state = "runAway";
+		}
+		if (other.gameObject.tag == "Player")
+		{
+			health_controller healthScript = other.gameObject.GetComponent<health_controller> ();
+			if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
+			{
+				healthScript.addHealth (collideDamage);
+			} else
+			{
+				Debug.Log ("health script null");
+			}
+		}
+		else //if mob hits a wall, pick a random direction to move in.
+		{
+			state = "moveRandom";
+			randomMoveTimer = 0; //reset timer
+		}
+	}
+
+	private void runAway()
+	{
+		
+		Vector2 movement_vector = lookAtPlayer ();
+		rb2d.MovePosition (rb2d.position - (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed));
+	}
+
+	private void actionPattern() //randomize state the mob is in
+	{
+		if (Time.time > stateTimer) //timer is up
+		{
+			stateTimer = Time.time + TimeBetweenRandomStates; //add time to timer
+			state = randomActions [Random.Range (0, randomActions.Count)];
+		}
+	}
+		
+	private void Start () 
+	{
+		player = GameObject.FindGameObjectsWithTag("Player1")[0];
+		rb2d = transform.parent.GetComponent<Rigidbody2D>();
+		anim = GetComponent<Animator>();
+		currentSpeed = mySpeed;
+		stateTimer = Time.time - TimeBetweenRandomStates;
+	}
+
+	private void FixedUpdate()  
+	{
+		switch(state)
+		{
+		case "chasePlayer":
+			chasePlayer ();
+			break;
+		case "runAway":
+			runAway();
+			break;
+		case "moveRandom":
+			moveRandom();
+			break;
+		default:
+			chasePlayer ();
+			break;
+		}
+			
+	}
+
+	private void Update () 
+	{
+		actionPattern ();
+		shootPlayer ();
+	}
+}
+
+
+#DungeonMob02_controller.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DungeonMob02_controller : MonoBehaviour {
+
+	public float mySpeed = 1.75f;
+	public float jumpSpeed = 3f;
+	public float collideDamage = -10f;
+	public float TimeBetweenRandomStates = 2f;
+
+	private GameObject player;
+	private GameObject obsticle;
+	private Rigidbody2D rb2d;
+	private Animator anim;
+	private float currentSpeed;
+	private string state;
+	private float randomMoveTimer = 0;
+	private Vector2 movement_vector;
+
+	private Transform childWithTag(string tag)
+	{
+		Transform childFound = null;
+		foreach (Transform child in transform)
+			if (child.CompareTag (tag))
+			{
+				childFound = child;
+			} 
+		if (childFound == null)
+		{
+			Debug.Log("no child found");
+		}
+		return childFound;
+	}
+
+	Vector2 lookAtPlayer()
+	{
+		Vector2 difference = player.transform.position - transform.root.position - new Vector3(0,.5f,0); //difference between mouse pos and character.
+		difference.Normalize(); //make 0-1
+		return new Vector2 (difference.x,difference.y);
+	}
+
+	float DistanceFromPlayer()
+	{
+		return Vector2.Distance(player.transform.position, transform.root.position);
+	}
+
+	private void chasePlayer()
+	{
+		if (DistanceFromPlayer() < 2f && DistanceFromPlayer() > 0f ) //slow down during approach
+		{
+			movement_vector = lookAtPlayer ();
+			rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed/1.7f));
+		}
+
+		if (DistanceFromPlayer() > 1f && DistanceFromPlayer() > 2f)
+		{
+			movement_vector = lookAtPlayer ();
+			rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed));
+		}
+	}
+	private IEnumerator jump()
+	{
+		anim.Play ("mob_jump_anim");
+		currentSpeed = jumpSpeed;
+		this.gameObject.layer = 12; //Jumping layer
+		yield return new WaitForSeconds(.9f);
+		currentSpeed = mySpeed;
+		this.gameObject.layer = 8; //Normal player layer
+	}
+		
+	private void moveRandom() //randomly move a direction
+	{
+		if (Time.time > randomMoveTimer) //timer is up, go back to chasing.
+		{
+			state = "chasePlayer";
+		} 
+		else
+		{
+			rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed));
+		}
+	}
+
+	void OnCollisionEnter2D(Collision2D other)
+	{
+		if (other.gameObject.layer == 11 || other.gameObject.layer == 9) //if on jumpable layer
+		{
+			StartCoroutine(jump ());
+		}
+		if (other.gameObject.tag == "Player")
+		{
+			state = "runAway";
+		}
+		if (other.gameObject.tag == "Player")
+		{
+			health_controller healthScript = other.gameObject.GetComponent<health_controller> ();
+			if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
+			{
+				healthScript.addHealth (collideDamage);
+			} else
+			{
+				Debug.Log ("health script null");
+			}
+		}
+		else //if mob hits a wall, pick a random direction to move in.
+		{
+			state = "moveRandom";
+			randomMoveTimer = Time.time + 1f; //add time to timer
+			movement_vector = new Vector2 (Random.Range (-1f, 1f),Random.Range (-1f, 1f)); //pick random x,y coordinates
+			movement_vector.Normalize(); //make 0-1
+			randomMoveTimer = 0; //reset timer
+		}
+	}
+
+	private void runAway()
+	{
+		if (DistanceFromPlayer () > 1f)//If far from Player, go back to chasing.
+		{
+			state = "chasePlayer";
+		}
+		else
+		{
+			Vector2 movement_vector = lookAtPlayer ();
+			rb2d.MovePosition (rb2d.position - (Vector2.ClampMagnitude (movement_vector, 1) * Time.deltaTime * currentSpeed));
+		}
+	}
+		
+		
+	private void Start () 
+	{
+		player = GameObject.FindGameObjectsWithTag("Player1")[0];
+		rb2d = transform.parent.GetComponent<Rigidbody2D>();
+		anim = GetComponent<Animator>();
+		currentSpeed = mySpeed;
+		state = "chasePlayer";
+	}
+
+	private void FixedUpdate()  
+	{
+		switch(state)
+		{
+		case "chasePlayer":
+			chasePlayer ();
+			break;
+		case "runAway":
+			runAway();
+			break;
+		case "moveRandom":
+			moveRandom();
+			break;
+		default:
+			chasePlayer ();
+			break;
+		}
+			
+	}
+
+	private void Update () 
+	{
+	}
+}
+
+
+#equipment_rotation.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class equipment_rotation : MonoBehaviour {
+
+	public float rotationOffset;
+
+	private SpriteRenderer sprite;
+
+	void lookAtDir(float rotation) //Determine the direction char/arm is aiming. Flop/layer the arm accordiningly.
+	{
+		if (rotation < 45 && rotation > -45)//1:30 -> 4:30, char looking right. 
+		{
+			sprite.sortingOrder = 3;
+		} 
+		else if (rotation < -45 && rotation > -100)//4:30 -> 7:30, char looking down. 
+		{
+			sprite.sortingOrder = 3;
+		} 
+		else if (rotation < 135 && rotation > 45) //char looking up
+		{
+			sprite.sortingOrder = 0;
+		} 
+		else //char looking left
+		{
+			sprite.sortingOrder = 1;
+		}
+	}
+
+	void Start()
+	{
+		sprite = GetComponent<SpriteRenderer> ();
+	}
+
+	void setRotation() //Based on mouse position, set the rotation of the arm (aim at mouse).
+	{
+		Vector3 difference = Camera.main.ScreenToWorldPoint (Input.mousePosition) - transform.root.position; //difference between mouse pos and character.
+		difference.Normalize(); //make 0-1
+		float rotationZ = Mathf.Atan2 (difference.y, difference.x) * Mathf.Rad2Deg; //find angle in degrees
+		lookAtDir (rotationZ);
+	}
+
+	void Update () 
+	{
+		setRotation();
+	}
+}
+
+
+#FindComponentInChildWithTag.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class FindComponentInChildWithTag : MonoBehaviour {
+
+	// Use this for initialization
+	void Start () {
+		
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+}
+
+
+#GameStateManager.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class GameStateManager : SingletonPersistant<GameStateManager>
+{
+	public void StartGame()
+	{
+		SceneManager.LoadScene("Arena");
+	}
+	public void QuitGame()
+	{
+		Application.Quit();
+	}
+	private void Start()
+	{
+
+	}
+}
+
+
+#gun_shoot.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class gun_shoot : MonoBehaviour {
+
+	public float speed = 10;
+	public float damageMultiplier = 5;
+	public string ammoType = "silverBullet";
+
+	Vector2 playerLookVector()
+	{
+		Vector2 difference = Camera.main.ScreenToWorldPoint (Input.mousePosition) - transform.root.position; //difference between mouse pos and character.
+		difference.Normalize(); //make 0-1
+		return new Vector2 (difference.x,difference.y);
+	}
+
+	void playerInputs()
+	{
+		if (Input.GetMouseButtonDown (0))
+		{
+			Transform shootFrom = this.gameObject.transform.GetChild(0);
+			GameObject bullet = (GameObject)Instantiate (Resources.Load ("prefabs/ammo/ammo_" + ammoType));
+			bullet.transform.position = shootFrom.position;
+			bullet.GetComponent<ammo_controller>().shootAmmo(damageMultiplier, speed, ammoType, playerLookVector());
+		}
+	}
+
+	void Update () 
+	{
+		playerInputs ();
+	}
+}
+
+
+#HealthBar_controller.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class HealthBar_controller : MonoBehaviour {
+
+	// Use this for initialization
+	void Start () {
+		
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+}
+
+
+#health_controller.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class health_controller : MonoBehaviour 
+{
+	public float Health = 100f;
+	private float healthLeft;
+	private Transform healthBar;
+
+
+	public void addHealth(float amount)
+	{
+		healthLeft += amount;
+		healthBar.GetChild(0).localScale = new Vector3 (healthLeft / Health,1,1);
+
+		if (healthLeft <= 0) //If player/mob runs out of health
+		{
+			if (this.tag == "Player")
+			{
+				Debug.Log ("You died.");
+			} 
+			else
+			{
+				GameObject death = (GameObject)Instantiate (Resources.Load ("prefabs/fx/DeathSprite"));
+				death.transform.position = transform.position;
+				Object.Destroy (transform.gameObject);
+			}
+		}
+	}
+
+	private Transform childWithTag(string tag)
+	{
+		Transform childFound = null;
+		foreach (Transform child in transform)
+			if (child.CompareTag (tag))
+			{
+				childFound = child;
+			} 
+		return childFound;
+	}
+
+	void Start()
+	{
+		healthBar = childWithTag ("healthBar");
+		healthLeft = Health;
+	}
+}
+
+
+#InputManager.cs
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class InputManager : MonoBehaviour {
+
+	// Use this for initialization
+	void Start () {
+		
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+}
+
+
