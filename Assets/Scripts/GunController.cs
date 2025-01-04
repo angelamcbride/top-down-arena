@@ -9,28 +9,9 @@ public class GunController : MonoBehaviour {
 	public string ammoType = "silverBullet";
     public GameObject GunOwner; // Ammo needs to know this so the player can't accidentally shoot themselves.
 
-    private GameObject FindPlayerObject() // Super janky implementation
-    {
-        Transform current = transform;
-
-        // Traverse up 4 levels
-        for (int i = 0; i < 4; i++)
-        {
-            if (current.parent != null)
-            {
-                current = current.parent;
-            }
-            else
-            {
-                Debug.LogError("Can't find the player!");
-            }
-        }
-        return current.gameObject;
-    }
-
 	Vector2 PlayerLookVector()
 	{
-        GunOwner = FindPlayerObject();
+        GunOwner = transform.parent.parent.parent.parent.gameObject;  // Super janky implementation
 
         Vector2 difference = Camera.main.ScreenToWorldPoint (Input.mousePosition) - transform.root.position; // difference between mouse pos and character.
 		difference.Normalize(); // make 0-1

@@ -52,7 +52,7 @@ public abstract class BaseMobController : MonoBehaviour
         return Vector2.Distance(player.transform.position, transform.root.position);
     }
 
-    protected void ChasePlayer()
+    protected virtual void ChasePlayer()
     {
         if (DistanceFromPlayer() < 2f && DistanceFromPlayer() > 0f) // slow down during approach
         {
@@ -60,14 +60,14 @@ public abstract class BaseMobController : MonoBehaviour
             rb2d.MovePosition(rb2d.position + (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed / 1.7f));
         }
 
-        else if (DistanceFromPlayer() > 1f && DistanceFromPlayer() > 2f)
+        else
         {
             movement_vector = LookAtPlayer();
             rb2d.MovePosition(rb2d.position + (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed));
         }
     }
 
-    private IEnumerator Jump()
+    protected IEnumerator Jump()
     {
         anim.Play("mob_jump_anim");
         currentSpeed = jumpSpeed;
@@ -102,25 +102,13 @@ public abstract class BaseMobController : MonoBehaviour
 
     void OnCollisionEnter2D(Collision2D other)
     {
-        if (other.gameObject.layer == 11 || other.gameObject.layer == 9) //if on jumpable layer
+        if (other.gameObject.tag == "Player")
+        {
+            WhenMobHitsPlayer(other.gameObject);
+        }
+        else if (other.gameObject.layer == 11 || other.gameObject.layer == 9) //if on jumpable layer
         {
             StartCoroutine(Jump());
-        }
-        if (other.gameObject.tag == "Player")
-        {
-            WhenMobHitsPlayer();
-        }
-        if (other.gameObject.tag == "Player")
-        {
-            HealthController healthScript = other.gameObject.GetComponent<HealthController>();
-            if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
-            {
-                healthScript.AddHealth(collideDamage);
-            }
-            else
-            {
-                Debug.Log("health script null");
-            }
         }
         else //if mob hits a wall, pick a random direction to move in.
         {
@@ -134,13 +122,18 @@ public abstract class BaseMobController : MonoBehaviour
         randomMoveTimer = 0; //reset timer
     }
 
-    protected virtual void WhenMobHitsPlayer()
+    protected virtual void WhenMobHitsPlayer(GameObject player)
     {
+        StartCoroutine(Jump());
         state = "runAway";
     }
 
-    protected void RunAway()
+    protected virtual void RunAway()
     {
+        if (DistanceFromPlayer() < 0.25f && DistanceFromPlayer() > 0f) // Jump if player is on top of mob
+        {
+            StartCoroutine(Jump());
+        }
         Vector2 movement_vector = LookAtPlayer();
         rb2d.MovePosition(rb2d.position - (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed));
     }

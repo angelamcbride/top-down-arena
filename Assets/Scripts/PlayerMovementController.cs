@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovementController : MonoBehaviour {
-	private float speed_walking = 3f; //in seconds
+	private float speed_walking = 3f; // in seconds
 	private float speed_running = 5f;
 	private float speed_dashing = 25f;
 	private float dashRate = .05f;
@@ -17,7 +17,6 @@ public class PlayerMovementController : MonoBehaviour {
 	public KeyCode rightKey = KeyCode.D;
 	public KeyCode jumpKey = KeyCode.Space;
 	public KeyCode dashKey = KeyCode.LeftAlt;
-	public bool lockAxis = true;
 
 	public string state;
 
@@ -26,14 +25,15 @@ public class PlayerMovementController : MonoBehaviour {
 	private Rigidbody2D rb2d;
 
 	private float speed;
-	private string axis;
+    private List<Direction> dirKeysPressed = new List<Direction>();
+    Vector2 moveVector = new Vector2(0, 0);
 
-	private float lastTapTime;
+    private float lastTapTime;
 	private float lastJumpTime;
-	private float lastDashTime;
 
+    private enum Direction { Up, Down, Left, Right }
 
-	private Transform ChildWithTag(string tag)
+    private Transform ChildWithTag(string tag)
 	{
 		Transform childFound = null;
 		foreach (Transform child in transform)
@@ -80,34 +80,22 @@ public class PlayerMovementController : MonoBehaviour {
 		}
 	}
 
-	//Only allow X or Y axis to be used one at a time. i.e. If moving on X last, Y is 0 even if two keys are held down.
-	void SetAxis()
-	{
-		if (Input.GetKeyDown (upKey) || Input.GetKeyDown (downKey)) //Lock Axis Y if up/down is pressed last to avoid diagonal movement.
-		{
-			axis = "Y";
-		} else if (Input.GetKeyDown (leftKey) || Input.GetKeyDown (rightKey)) //Lock Axis X if left/right is pressed last to avoid diagonal movement.
-		{
-			axis = "X";
-		} 
-	}
-
 	void LookAtDir() //Make the character look in the direction of the mouse
 	{
 		Vector3 difference = Camera.main.ScreenToWorldPoint (Input.mousePosition) - transform.position; //difference between mouse pos and character.
 		difference.Normalize(); //make 0-1
 		float rotationZ = Mathf.Atan2 (difference.y, difference.x) * Mathf.Rad2Deg; //find angle in degrees
-		if (rotationZ < 45 && rotationZ > -45)//1:30 -> 4:30, char looking right. 
+		if (rotationZ <= 45 && rotationZ >= -45)//1:30 -> 4:30, char looking right. 
 		{
 			anim.SetFloat ("x", 1);
 			anim.SetFloat ("y", 0);
 		} 
-		else if (rotationZ < -45 && rotationZ > -100)//4:30 -> 7:30, char looking down. 
+		else if (rotationZ <= -45 && rotationZ >= -100)//4:30 -> 7:30, char looking down. 
 		{
 			anim.SetFloat ("x", 0);
 			anim.SetFloat ("y", -1);
 		} 
-		else if (rotationZ < 135 && rotationZ > 45) //char looking up
+		else if (rotationZ <= 135 && rotationZ >= 45) //char looking up
 		{
 			anim.SetFloat ("x", 0);
 			anim.SetFloat ("y", 1);
@@ -121,27 +109,13 @@ public class PlayerMovementController : MonoBehaviour {
 
 	void MovePlayer()
 	{
-		float input_x = Input.GetAxisRaw ("Horizontal");
-		float input_y = Input.GetAxisRaw ("Vertical");
-		Vector2 movement_vector = new Vector2 (input_x, input_y);
-
-		if (movement_vector != Vector2.zero)
-		{
-			if (axis == "Y" && lockAxis == true) //Lock axis to Y
-			{
-				rb2d.MovePosition (rb2d.position + (new Vector2 (0, input_y) * Time.deltaTime * speed));
-			}
-
-			else if (axis == "X" && lockAxis == true) //Lock axis to X
-			{
-				rb2d.MovePosition (rb2d.position + (new Vector2 (input_x, 0) * Time.deltaTime * speed));
-			} 
-			else if (lockAxis == false)
-			{
-				Vector2 move = new Vector2 (input_x, input_y);
-				rb2d.MovePosition (rb2d.position + (Vector2.ClampMagnitude(move, 1) * Time.deltaTime * speed));
-			}
-		} 
+        if (Input.GetKey(upKey) || Input.GetKey(downKey) || Input.GetKey(leftKey) || Input.GetKey(rightKey))
+        {
+            if(dirKeysPressed.Count > 0)
+            {
+                rb2d.MovePosition(rb2d.position + moveVector * Time.deltaTime * speed);
+            }
+        }
 		else
 		{
 			state = "idle";
@@ -159,47 +133,90 @@ public class PlayerMovementController : MonoBehaviour {
 	{
 		if(Time.time > lastJumpTime) //if player is jumping
 		{
-			this.gameObject.layer = 8; //Normal player layer
-		}
+			transform.parent.gameObject.layer = 8; //Normal player layer
+            gameObject.layer = 8;
+        }
 		else
 		{
-			this.gameObject.layer = 12; //Jumping layer
-		}
+            transform.parent.gameObject.layer = 12; //Jumping layer
+            gameObject.layer = 12;
+        }
 	}
 
 	void PlayerInput()
 	{
-		///// WALK/RUN /////
-		if (Input.GetKeyDown (upKey) || Input.GetKeyDown (downKey) || Input.GetKeyDown (leftKey) || Input.GetKeyDown (rightKey))
+        ///// Save direction of the last keys pressed/unpressed. This favors the last currently held key in case multiple keys are being held. /////
+        if (Input.GetKeyDown(upKey))
+            dirKeysPressed.Add(Direction.Up);
+        if (Input.GetKeyDown(downKey))
+            dirKeysPressed.Add(Direction.Down);
+        if (Input.GetKeyDown(leftKey))
+            dirKeysPressed.Add(Direction.Left);
+        if (Input.GetKeyDown(rightKey))
+            dirKeysPressed.Add(Direction.Right);
+
+        if (Input.GetKeyUp(upKey))
+            dirKeysPressed.RemoveAll(direction => direction == Direction.Up);
+        if (Input.GetKeyUp(downKey))
+            dirKeysPressed.RemoveAll(direction => direction == Direction.Down);
+        if (Input.GetKeyUp(leftKey))
+            dirKeysPressed.RemoveAll(direction => direction == Direction.Left);
+        if (Input.GetKeyUp(rightKey))
+            dirKeysPressed.RemoveAll(direction => direction == Direction.Right);
+
+        ///// WALK/RUN /////
+        if (Input.GetKeyDown(upKey) || Input.GetKeyDown(downKey) || Input.GetKeyDown(leftKey) || Input.GetKeyDown(rightKey) ||
+            Input.GetKeyUp(upKey) || Input.GetKeyUp(downKey) || Input.GetKeyUp(leftKey) || Input.GetKeyUp(rightKey))
 		{
-			if (Time.time - lastTapTime < tapSpeed)
-			{
-				state = "running";
-			}
-			else
-			{
-				state = "walking";
-			}
-			lastTapTime = Time.time;
-		}
+            if(dirKeysPressed.Count > 0)
+            {
+                Direction moveDirection = dirKeysPressed[dirKeysPressed.Count - 1];
+                switch (moveDirection)
+                {
+                    case Direction.Up:
+                        moveVector = new Vector2(0, 1);
+                        break;
+                    case Direction.Down:
+                        moveVector = new Vector2(0, -1);
+                        break;
+                    case Direction.Left:
+                        moveVector = new Vector2(-1, 0);
+                        break;
+                    case Direction.Right:
+                        moveVector = new Vector2(1, 0);
+                        break;
+                }
+
+                if (Time.time - lastTapTime < tapSpeed)
+                {
+                    state = "running";
+                }
+
+                else
+                {
+                    state = "walking";
+                }
+                lastTapTime = Time.time;
+            }
+        }
 
 		///// DASH /////
-		if (Input.GetKeyDown (dashKey)) //&& (Time.time - lastDashTime < dashRate))
+		if (Input.GetKeyDown (dashKey)) // && (Time.time - lastDashTime < dashRate))
 		{
 			StartCoroutine (dash (state));
 		}
 
 		///// JUMP/SHORTJUMP /////
-		if (Input.GetKeyDown(jumpKey) && Time.time > lastJumpTime)  //If jump key is pressed and char is not already jumping.
+		if (Input.GetKeyDown(jumpKey) && Time.time > lastJumpTime)  // If jump key is pressed and char is not already jumping.
 		{
             AudioManager.Instance.PlaySound("Jump");
             anim.SetBool ("shortJump", false);
 			anim.Play ("Long Jump Blend Tree");
-			lastJumpTime = Time.time + longJumpRate; //Add cooldown to timer.
+			lastJumpTime = Time.time + longJumpRate; // Add cooldown to timer.
 		}
 		if (Input.GetKeyUp (jumpKey) && Time.time < lastJumpTime && lastJumpTime - Time.time > (longJumpRate/3)*2) //Short jump if key is un-pressed during first 3rd of jump.
 		{
-			lastJumpTime -= (longJumpRate - shortJumpRate); //subtract time from jump cooldown timer, because jump was shortened.
+			lastJumpTime -= (longJumpRate - shortJumpRate); // subtract time from jump cooldown timer, because jump was shortened.
 			anim.SetBool ("shortJump", true);
 		}
 		anim.SetBool ("isJumping", Time.time < lastJumpTime);
@@ -222,7 +239,6 @@ public class PlayerMovementController : MonoBehaviour {
 	void Update () 
 	{
 		SetSpeed();
-		SetAxis();
 		PlayerInput();
 		LookAtDir();
 		CollideOffDuringJump();

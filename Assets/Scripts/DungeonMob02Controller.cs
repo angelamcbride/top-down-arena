@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class DungeonMob02Controller : BaseMobController
 {
-	
-	private void Start () 
+    private float runAwayTimer = 0;
+
+    private void Start () 
 	{
 		player = GameObject.FindGameObjectsWithTag("Player1")[0];
 		rb2d = transform.parent.GetComponent<Rigidbody2D>();
@@ -31,19 +32,41 @@ public class DungeonMob02Controller : BaseMobController
         }
     }
 
-    protected override void WhenMobHitsPlayer()
+    protected override void RunAway()
     {
-        state = "moveRandom";
-        randomMoveTimer = Time.time + 0.25f; //add time to timer
-        movement_vector = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)); //pick random x,y coordinates
-        movement_vector.Normalize(); //make 0-1
+        if (Time.time > runAwayTimer) //timer is up, go back to chasing.
+        {
+            state = "chasePlayer";
+        }
+        else
+        {
+            Vector2 movement_vector = LookAtPlayer();
+            rb2d.MovePosition(rb2d.position - (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed));
+        }
+    }
+
+    protected override void WhenMobHitsPlayer(GameObject player)
+    {
+        StartCoroutine(Jump());
+        state = "runAway";
+        runAwayTimer = Time.time + 0.25f; // Run away for 0.25 seconds
+        Debug.Log("Player hit: " + player.name);
+        HealthController healthScript = player.transform.ChildWithTag("healthBar").GetComponent<HealthController>();
+        if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
+        {
+            healthScript.AddHealth(collideDamage);
+        }
+        else
+        {
+            Debug.Log("health script null");
+        }
     }
 
     protected override void WhenMobHitsWall()
     {
         state = "moveRandom";
-        randomMoveTimer = Time.time + 1f; //add time to timer
-        movement_vector = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)); //pick random x,y coordinates
+        randomMoveTimer = Time.time + 1f; // Move in a random direction for 1 second.
+        movement_vector = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)); // pick random x,y coordinates
         movement_vector.Normalize(); //make 0-1
     }
 }

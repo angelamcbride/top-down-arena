@@ -38,7 +38,7 @@ public class AmmoController : MonoBehaviour
 			float distance = Vector2.Distance(startPos, transform.position);
 			if (distance > distanceMax)
 			{
-				Object.Destroy (this.gameObject);
+				Object.Destroy (gameObject);
 			} 
 			else
 			{
@@ -54,17 +54,25 @@ public class AmmoController : MonoBehaviour
 
 	void OnTriggerEnter2D(Collider2D other)
 	{
-        if (other.gameObject != ammoShooter) // Don't let the shooter shoot themselves
+        if (other.isTrigger)
         {
-            if (other.gameObject.tag == "Player" || other.gameObject.tag == "Enemy")
+            if (other.gameObject != ammoShooter) // Don't let the shooter shoot themselves
             {
-                HealthController healthScript = other.transform.root.GetComponent<HealthController>();
-                if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
+            
+                if (other.gameObject.tag == "Player" || other.gameObject.tag == "Enemy")
                 {
-                    healthScript.AddHealth(CalculatedDamage);
+                    HealthController healthScript = other.transform.ChildWithTag("healthBar").GetComponent<HealthController>();
+                    if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
+                    {
+                        healthScript.AddHealth(CalculatedDamage);
+                    }
+                    else
+                    {
+                        Debug.Log("Health controller is null");
+                    }
                 }
             }
         }
-		Object.Destroy (this.gameObject);
+		Object.Destroy (gameObject);
 	}
 }

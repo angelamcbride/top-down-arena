@@ -23,16 +23,16 @@ public class ArmController : MonoBehaviour {
     private Direction GetDirection(Vector2 difference)
     {
         float angle = Mathf.Atan2(difference.y, difference.x) * Mathf.Rad2Deg;
-
-        if (angle > -45 && angle <= 45) return Direction.Right; // 1:30 -> 4:30, char looking right. 
-        if (angle > 45 && angle <= 135) return Direction.Up;
-        if (angle > 135 || angle <= -135) return Direction.Left;
-        return Direction.Down; // else char is looking down
+        if (angle >= -45 && angle <= 45) return Direction.Right; // 1:30 -> 4:30, char looking right. 
+        if (angle <= 135 && angle >= 45) return Direction.Up;
+        if (angle <= -45 && angle >= -100) return Direction.Down; // 4:30 -> 7:30, char looking down.
+        return Direction.Left; // else char is looking left
     }
 
     void SetSpriteOrderAndOffset() // Determine the direction char/arm is aiming. Flop/layer the arm accordiningly.
 	{
-        Vector3 difference = Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position;
+        Vector3 playerPos = transform.parent.parent.position; // Depends on arm being in exact hierarchy position. needs fix. 
+        Vector3 difference = Camera.main.ScreenToWorldPoint(Input.mousePosition) - playerPos;
         difference.z = 0; // Ignore the Z-axis for 2D
 
         Direction dir = GetDirection(new Vector2(difference.x, difference.y));
