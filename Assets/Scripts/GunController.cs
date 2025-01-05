@@ -20,7 +20,7 @@ public class GunController : MonoBehaviour {
 
 	void PlayerInputs()
 	{
-		if (Input.GetMouseButtonDown (0))
+		if (Input.GetMouseButtonDown (0) && !GameStateManager.Instance.IsPaused)
 		{
             AudioManager.Instance.PlaySound("Gunshot");
             Transform shootFrom = this.gameObject.transform.GetChild(0);
@@ -32,6 +32,9 @@ public class GunController : MonoBehaviour {
 
 	void Update () 
 	{
-		PlayerInputs ();
+        if(!GameStateManager.Instance.IsPaused)
+        {
+            PlayerInputs();
+        }
 	}
 }

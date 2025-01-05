@@ -54,11 +54,10 @@ public class AmmoController : MonoBehaviour
 
 	void OnTriggerEnter2D(Collider2D other)
 	{
-        if (other.isTrigger)
+        if (other.gameObject != ammoShooter) // Don't let the shooter shoot themselves
         {
-            if (other.gameObject != ammoShooter) // Don't let the shooter shoot themselves
+            if (other.isTrigger)
             {
-            
                 if (other.gameObject.tag == "Player" || other.gameObject.tag == "Enemy")
                 {
                     HealthController healthScript = other.transform.ChildWithTag("healthBar").GetComponent<HealthController>();
@@ -72,7 +71,7 @@ public class AmmoController : MonoBehaviour
                     }
                 }
             }
+            Object.Destroy(gameObject);
         }
-		Object.Destroy (gameObject);
 	}
 }

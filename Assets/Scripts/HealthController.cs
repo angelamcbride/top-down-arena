@@ -36,12 +36,18 @@ public class HealthController : MonoBehaviour
 				death.transform.position = transform.parent.position;
 				Destroy(transform.parent.parent.gameObject); // Not great if Hierarchy changes..
                 AudioManager.Instance.PlaySound("MobDeath");
+                ScoreManager.Instance.AddScore(1);
             }
 		}
         else
         {
             healthLeft += amount;
-            transform.GetChild(0).localScale = new Vector3(healthLeft / Health, 1, 1);
+            Vector3 healthBarScale = new Vector3(healthLeft / Health, 1, 1);
+            transform.GetChild(0).localScale = healthBarScale;
+            if (transform.parent.tag == "Player")
+            {
+                UIManager.Instance.ScaleHealthBar(healthBarScale);
+            }
         }
 	}
 

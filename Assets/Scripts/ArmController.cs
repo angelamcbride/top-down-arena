@@ -109,7 +109,10 @@ public class ArmController : MonoBehaviour {
 
     void Update () 
 	{
-        SetSpriteOrderAndOffset();
-        SetRotation();
+        if (!GameStateManager.Instance.IsPaused)
+        {
+            SetSpriteOrderAndOffset();
+            SetRotation();
+        }
     }
 }

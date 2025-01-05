@@ -50,7 +50,6 @@ public class DungeonMob02Controller : BaseMobController
         StartCoroutine(Jump());
         state = "runAway";
         runAwayTimer = Time.time + 0.25f; // Run away for 0.25 seconds
-        Debug.Log("Player hit: " + player.name);
         HealthController healthScript = player.transform.ChildWithTag("healthBar").GetComponent<HealthController>();
         if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
         {

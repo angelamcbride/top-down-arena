@@ -238,9 +238,12 @@ public class PlayerMovementController : MonoBehaviour {
 
 	void Update () 
 	{
-		SetSpeed();
-		PlayerInput();
-		LookAtDir();
-		CollideOffDuringJump();
+        if (!GameStateManager.Instance.IsPaused)
+        {
+            SetSpeed();
+            PlayerInput();
+            LookAtDir();
+            CollideOffDuringJump();
+        }
 	}
 }
