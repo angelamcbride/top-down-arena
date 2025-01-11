@@ -2,7 +2,7 @@
 
 public class ScoreManager : SingletonNonPersistent<ScoreManager>
 {
-    private int score = 0;
+    public int score = 0;
 
     public int GetScore()
     {

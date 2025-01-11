@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class AmmoController : MonoBehaviour 
 {
-	public float damage = 5f;
-	public float distanceMax = 10f;
-	public string myAmmoType = "silverBullet";
+    [SerializeField] private float damage = 5f;
+    [SerializeField] private float distanceMax = 10f;
+    [SerializeField] private string myAmmoType = "silverBullet";
 
 	private bool shot;
 	private float CalculatedDamage;
@@ -14,10 +14,11 @@ public class AmmoController : MonoBehaviour
 	private Vector2 startPos;
 	private Vector2 shootVector;
     private GameObject ammoShooter;
+    private float knockbackOnImpact;
 
 	private Rigidbody2D rb2d;
 
-	public void ShootAmmo(float damageMultiplier, float speed, string ammoType, Vector2 playerLookVector, GameObject gunOwner)
+	public void ShootAmmo(float damageMultiplier, float speed, string ammoType, Vector2 playerLookVector, GameObject gunOwner, float knockback = 5f)
 	{
         ammoShooter = gunOwner;
 
@@ -27,7 +28,8 @@ public class AmmoController : MonoBehaviour
 			mySpeed = speed;
 			startPos = transform.position;
 			shootVector = playerLookVector;
-			shot = true;
+            knockbackOnImpact = knockback;
+            shot = true;
 		}
 	}
 
@@ -49,7 +51,7 @@ public class AmmoController : MonoBehaviour
 
 	void Start () 
 	{
-		rb2d = this.GetComponent<Rigidbody2D>();
+		rb2d = GetComponent<Rigidbody2D>();
 	}
 
 	void OnTriggerEnter2D(Collider2D other)
@@ -58,12 +60,14 @@ public class AmmoController : MonoBehaviour
         {
             if (other.isTrigger)
             {
-                if (other.gameObject.tag == "Player" || other.gameObject.tag == "Enemy")
+                GameObject hitObject = other.gameObject;
+                if (hitObject.tag == "Player" || other.gameObject.tag == "Enemy")
                 {
+                    hitObject.transform.parent.GetComponent<Rigidbody2D>().AddForce(shootVector* knockbackOnImpact);
                     HealthController healthScript = other.transform.ChildWithTag("healthBar").GetComponent<HealthController>();
                     if (healthScript != null) //Sometimes health script is null because object is in the process of dying. If it isn't dead/null we can access its health script.
                     {
-                        healthScript.AddHealth(CalculatedDamage);
+                        healthScript.ModifyHealth(CalculatedDamage);
                     }
                     else
                     {

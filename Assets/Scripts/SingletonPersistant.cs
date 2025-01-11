@@ -10,7 +10,7 @@ public class SingletonPersistant<T> : MonoBehaviour where T : Component
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<T>();
+                instance = FindFirstObjectByType<T>();
                 if (instance == null)
                 {
                     Debug.Log("You are missing a singletonPersistant in your scene.");
@@ -30,6 +30,7 @@ public class SingletonPersistant<T> : MonoBehaviour where T : Component
         else
         {
             Destroy(gameObject);
+            Debug.Log("You have a duplicate singleton in your scene. Self destructing.");
         }
     }
 }

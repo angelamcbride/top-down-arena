@@ -9,7 +9,8 @@ public class ArmController : MonoBehaviour {
 	private int armOffsetflopY = -0; // in pixels
 	private int armOffsetNormalX = -0; // in pixels
 	private float armOffsetFlopX = 6; // in pixels
-    public float equipmentRotationOffset;
+    [SerializeField] private float equipmentRotationOffset;
+    [SerializeField] private GameObject player;
 
     private SpriteRenderer equipmentSprite;
     private SpriteRenderer armSprite;
@@ -31,7 +32,7 @@ public class ArmController : MonoBehaviour {
 
     void SetSpriteOrderAndOffset() // Determine the direction char/arm is aiming. Flop/layer the arm accordiningly.
 	{
-        Vector3 playerPos = transform.parent.parent.position; // Depends on arm being in exact hierarchy position. needs fix. 
+        Vector3 playerPos = player.transform.position;
         Vector3 difference = Camera.main.ScreenToWorldPoint(Input.mousePosition) - playerPos;
         difference.z = 0; // Ignore the Z-axis for 2D
 
@@ -94,6 +95,12 @@ public class ArmController : MonoBehaviour {
         if (equipmentSlotR == null)
         {
             Debug.LogError("equipmentSlotR not found under this object!");
+            return;
+        }
+
+        if (equipmentSlotR == null)
+        {
+            Debug.LogError("Player object not assigned in inspector!");
             return;
         }
 

@@ -2,14 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerMovementController : MonoBehaviour {
-	private float speed_walking = 3f; // in seconds
+public class PlayerMovementController : MonoBehaviour
+{
+    private LayerMask playerLayer;
+    private LayerMask jumpLayer;
+
+    private float speed_walking = 3f; // in seconds
 	private float speed_running = 5f;
 	private float speed_dashing = 25f;
 	private float dashRate = .05f;
-	private float tapSpeed = 0.5f;
+	private float tapSpeed = 0.4f;
 	private float shortJumpRate = .4f;
 	private float longJumpRate = .65f;
+    private float jumpStamina = 10f;
 
 	public KeyCode upKey = KeyCode.W;
 	public KeyCode downKey = KeyCode.S;
@@ -18,13 +23,18 @@ public class PlayerMovementController : MonoBehaviour {
 	public KeyCode jumpKey = KeyCode.Space;
 	public KeyCode dashKey = KeyCode.LeftAlt;
 
+    public bool useForce = false;
+    [SerializeField] private float forceMultiplier = 15;
+
 	public string state;
 
 	private Animator anim;
 	private Animator anim_arm;
 	private Rigidbody2D rb2d;
+    private StaminaController staminaController;
+    
 
-	private float speed;
+    private float speed;
     private List<Direction> dirKeysPressed = new List<Direction>();
     Vector2 moveVector = new Vector2(0, 0);
 
@@ -113,7 +123,14 @@ public class PlayerMovementController : MonoBehaviour {
         {
             if(dirKeysPressed.Count > 0)
             {
-                rb2d.MovePosition(rb2d.position + moveVector * Time.deltaTime * speed);
+                if(useForce)
+                {
+                    rb2d.AddForce(Vector2.ClampMagnitude(moveVector, 1) * speed * forceMultiplier * Time.fixedDeltaTime, ForceMode2D.Force); // Use force instead of MovePosition
+                }
+                else
+                {
+                    rb2d.MovePosition(rb2d.position + moveVector * Time.fixedDeltaTime * speed);
+                }
             }
         }
 		else
@@ -131,15 +148,15 @@ public class PlayerMovementController : MonoBehaviour {
 
 	void CollideOffDuringJump()
 	{
-		if(Time.time > lastJumpTime) //if player is jumping
+		if(Time.time > lastJumpTime) // if player is jumping, land.
 		{
-			transform.parent.gameObject.layer = 8; //Normal player layer
-            gameObject.layer = 8;
+            transform.parent.gameObject.layer = playerLayer;
+            gameObject.layer = playerLayer;
         }
-		else
+		else // jump
 		{
-            transform.parent.gameObject.layer = 12; //Jumping layer
-            gameObject.layer = 12;
+            transform.parent.gameObject.layer = jumpLayer;
+            gameObject.layer = jumpLayer;
         }
 	}
 
@@ -187,7 +204,7 @@ public class PlayerMovementController : MonoBehaviour {
                         break;
                 }
 
-                if (Time.time - lastTapTime < tapSpeed)
+                if (Time.time - lastTapTime < tapSpeed && staminaController.CurrentStamina > 0)
                 {
                     state = "running";
                 }
@@ -201,7 +218,7 @@ public class PlayerMovementController : MonoBehaviour {
         }
 
 		///// DASH /////
-		if (Input.GetKeyDown (dashKey)) // && (Time.time - lastDashTime < dashRate))
+		if (Input.GetKeyDown (dashKey) && staminaController.CurrentStamina > 0) // && (Time.time - lastDashTime < dashRate))
 		{
 			StartCoroutine (dash (state));
 		}
@@ -209,7 +226,11 @@ public class PlayerMovementController : MonoBehaviour {
 		///// JUMP/SHORTJUMP /////
 		if (Input.GetKeyDown(jumpKey) && Time.time > lastJumpTime)  // If jump key is pressed and char is not already jumping.
 		{
-            AudioManager.Instance.PlaySound("Jump");
+            if (staminaController.CurrentStamina > 0)
+            {
+                staminaController.UseStamina(jumpStamina);
+            }
+                AudioManager.Instance.PlaySound("Jump");
             anim.SetBool ("shortJump", false);
 			anim.Play ("Long Jump Blend Tree");
 			lastJumpTime = Time.time + longJumpRate; // Add cooldown to timer.
@@ -225,7 +246,10 @@ public class PlayerMovementController : MonoBehaviour {
 	}
 	void Start() 
 	{
-		rb2d = gameObject.GetComponentInParent<Rigidbody2D>();
+        playerLayer = LayerMask.NameToLayer("Player");
+        jumpLayer = LayerMask.NameToLayer("Jumping");
+        staminaController = GetComponent<StaminaController>();
+        rb2d = gameObject.GetComponentInParent<Rigidbody2D>();
 		anim = GetComponent<Animator>();
 		anim_arm = ChildWithTag("playerArmR").gameObject.GetComponent<Animator>();
 		state = "idle";

@@ -4,14 +4,17 @@ using UnityEngine;
 
 public abstract class BaseMobController : MonoBehaviour
 {
-    public float mySpeed = 2f;
-    public float jumpSpeed = 3f;
-    public float collideDamage = -6f;
-    public float DamageMultiplier = 5f;
-    public string AmmoType = "greenMagic";
-    public float AmmoSpeed = 8f;
-    public float FireRate = .5f;
-    public float TimeBetweenRandomStates = 2f;
+    [SerializeField] private float mySpeed = 3f;
+    [SerializeField] private float jumpSpeed = 3f;
+    [SerializeField] protected float collideDamage = -6f;
+    [SerializeField] private float DamageMultiplier = 5f;
+    [SerializeField] private string AmmoType = "greenMagic";
+    [SerializeField] private float AmmoSpeed = 8f;
+    [SerializeField] private float FireRate = 0.5f;
+    [SerializeField] protected float TimeBetweenRandomStates = 2f;
+    [SerializeField] private float heartDropChance = 0.5f;
+
+    [SerializeField] private Transform shootPoint;
 
     protected GameObject player;
     protected GameObject obsticle;
@@ -40,9 +43,25 @@ public abstract class BaseMobController : MonoBehaviour
         return childFound;
     }
 
-    protected Vector2 LookAtPlayer()
+    public virtual void OnMobSpawned()
     {
-        Vector2 difference = player.transform.position - transform.root.position - new Vector3(0, .5f, 0); // difference between mouse pos and character.
+        MonsterSpawner.AdjustActiveMobCount(1); // Increment the active mob count
+    }
+
+    public virtual void Die()
+    {
+        MonsterSpawner.AdjustActiveMobCount(-1); // Decrement the active mob count
+        if (Random.value < heartDropChance)
+        {
+            GameObject heart = Resources.Load<GameObject>("Prefabs/Items/Heart");
+            Instantiate(heart, transform.position, Quaternion.identity);
+        }
+        Destroy(transform.parent.gameObject); // Destroy the parent object which contains the mob and its shadow.
+    }
+
+    protected Vector2 LookAtPlayer(Vector3 originPos)
+    {
+        Vector2 difference = player.transform.position - originPos - new Vector3(0, .5f, 0); // difference between mouse pos and character.
         difference.Normalize(); //make 0-1
         return new Vector2(difference.x, difference.y);
     }
@@ -54,17 +73,9 @@ public abstract class BaseMobController : MonoBehaviour
 
     protected virtual void ChasePlayer()
     {
-        if (DistanceFromPlayer() < 2f && DistanceFromPlayer() > 0f) // slow down during approach
-        {
-            movement_vector = LookAtPlayer();
-            rb2d.MovePosition(rb2d.position + (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed / 1.7f));
-        }
-
-        else
-        {
-            movement_vector = LookAtPlayer();
-            rb2d.MovePosition(rb2d.position + (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed));
-        }
+        movement_vector = LookAtPlayer(transform.root.position);
+        float speedModifier = DistanceFromPlayer() < 2f ? 1.7f : 1f;
+        rb2d.AddForce(Vector2.ClampMagnitude(movement_vector, 1) * currentSpeed / speedModifier, ForceMode2D.Force);
     }
 
     protected IEnumerator Jump()
@@ -72,6 +83,7 @@ public abstract class BaseMobController : MonoBehaviour
         anim.Play("mob_jump_anim");
         currentSpeed = jumpSpeed;
         this.gameObject.layer = 12; //Jumping layer
+        rb2d.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
         yield return new WaitForSeconds(.9f);
         currentSpeed = mySpeed;
         this.gameObject.layer = 8; //Normal player layer
@@ -82,13 +94,13 @@ public abstract class BaseMobController : MonoBehaviour
         if (Time.time > shootTimer) //timer is up
         {
             shootTimer = Time.time + FireRate; //add time to timer
-            Transform shootFrom = ChildWithTag("ShootFrom");
             GameObject bullet = (GameObject)Instantiate(Resources.Load("prefabs/ammo/ammo_" + AmmoType));
             Physics2D.IgnoreCollision(bullet.GetComponent<Collider2D>(), GetComponent<Collider2D>(), true);
-            bullet.transform.position = shootFrom.position;
-            bullet.GetComponent<AmmoController>().ShootAmmo(DamageMultiplier, AmmoSpeed, AmmoType, LookAtPlayer(), gameObject);
+            bullet.transform.position = shootPoint.position;
+            bullet.GetComponent<AmmoController>().ShootAmmo(DamageMultiplier, AmmoSpeed, AmmoType, LookAtPlayer(shootPoint.position), gameObject, 5f);
         }
     }
+
     protected virtual void MoveRandom() //randomly move a direction
     {
         if (Time.time > randomMoveTimer) //timer is up, change directions.
@@ -97,12 +109,12 @@ public abstract class BaseMobController : MonoBehaviour
             movement_vector = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)); //pick random x,y coordinates
             movement_vector.Normalize(); //make 0-1
         }
-        rb2d.MovePosition(rb2d.position + (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed));
+        rb2d.AddForce(Vector2.ClampMagnitude(movement_vector, 1) * currentSpeed, ForceMode2D.Force);
     }
 
     void OnCollisionEnter2D(Collision2D other)
     {
-        if (other.gameObject.tag == "Player")
+        if (other.gameObject.tag == "Player" || other.gameObject.tag == "PlayerParent")
         {
             WhenMobHitsPlayer(other.gameObject);
         }
@@ -134,8 +146,8 @@ public abstract class BaseMobController : MonoBehaviour
         {
             StartCoroutine(Jump());
         }
-        Vector2 movement_vector = LookAtPlayer();
-        rb2d.MovePosition(rb2d.position - (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed));
+        movement_vector = LookAtPlayer(transform.root.position);
+        rb2d.AddForce(-Vector2.ClampMagnitude(movement_vector, 1) * currentSpeed * Time.fixedDeltaTime, ForceMode2D.Force);
     }
 
     protected void ActionPattern() //randomize state the mob is in
@@ -149,7 +161,7 @@ public abstract class BaseMobController : MonoBehaviour
 
     private void Start()
     {
-        player = GameObject.FindGameObjectsWithTag("Player1")[0];
+        player = GameObject.FindGameObjectWithTag("PlayerTarget");
         rb2d = transform.parent.GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         currentSpeed = mySpeed;
@@ -158,6 +170,7 @@ public abstract class BaseMobController : MonoBehaviour
 
     protected virtual void MobSpecificStart()
     {
+        state = "chasePlayer";
     }
 
     private void FixedUpdate()

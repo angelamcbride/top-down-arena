@@ -6,11 +6,15 @@ public class ButtonSound : MonoBehaviour, IPointerEnterHandler
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        PlaySound();
+        HoverSound();
     }
 
-    public void PlaySound()
+    public void HoverSound()
     {
-        AudioManager.Instance.PlaySound("PlayerHit");
+        AudioManager.Instance.PlaySound("Beep");
+    }
+    public void ButtonClickSound()
+    {
+        AudioManager.Instance.PlaySound("Beep");
     }
 }

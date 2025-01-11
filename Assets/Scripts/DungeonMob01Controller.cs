@@ -11,7 +11,7 @@ public class DungeonMob01Controller : BaseMobController
 
     protected override void ChasePlayer()
     {
-        movement_vector = LookAtPlayer();
+        movement_vector = LookAtPlayer(transform.root.position);
         rb2d.MovePosition(rb2d.position + (Vector2.ClampMagnitude(movement_vector, 1) * Time.deltaTime * currentSpeed));
     }
 

@@ -10,19 +10,53 @@ public class AudioManager : SingletonPersistant<AudioManager>
 
     public float SFXVolume { get; set; } = 1f;
     public float MusicVolume { get; set; } = 0.4f;
+    public float hoverSoundCooldown = 0.05f;
+    public bool musicEnabledPref;
+    //public bool musicEnabled = true;
+    public bool musicPlaying;
+    [SerializeField] private const string backgroundMusicTrack = "BackgroundMusic";
 
-    protected override void Awake()
+    private Dictionary<string, float> soundCooldowns = new Dictionary<string, float>();
+
+    public void Start()
     {
-        base.Awake();
         audioSource = gameObject.AddComponent<AudioSource>();
         musicSource = gameObject.AddComponent<AudioSource>();
         musicSource.loop = true; // For background music
+
+        LoadAudioClips();
     }
 
-    private void Start()
+    public void StartAudioManager()
     {
-        LoadAudioClips();
-        AudioManager.Instance.PlayMusic("BackgroundMusic"); // Can move this at a later point. For now always play music.
+        if (musicEnabledPref && !musicPlaying)
+        {
+            PlayMusic();
+            //Debug.Log("Music was enabled in the player pref.");
+            //musicPlaying = true;
+        }
+    }
+
+    public void ToggleMusic()
+    {
+        musicEnabledPref = !musicEnabledPref;
+        //Debug.Log("musicEnabled was " + musicEnabled + ". now it's " + !musicEnabled);
+        //AudioManager.Instance.musicEnabled = !AudioManager.Instance.musicEnabled;
+        if (musicEnabledPref)
+        {
+            Instance.PlayMusic();
+            PlayerPrefs.SetInt("Music", 0);
+            Debug.Log("Music enabled.");
+            //musicEnabled = true;
+        }
+        else
+        {
+            Instance.StopMusic();
+            PlayerPrefs.SetInt("Music", 1);
+            Debug.Log("Music disabled.");
+            //musicEnabled = false;
+        }
+        UIManager.Instance.SetMusicCheckbox(musicEnabledPref);
     }
 
     private void LoadAudioClips()
@@ -51,6 +85,12 @@ public class AudioManager : SingletonPersistant<AudioManager>
     {
         if (audioClips.ContainsKey(soundName))
         {
+            float currentTime = Time.time;
+            if (soundCooldowns.ContainsKey(soundName) && currentTime - soundCooldowns[soundName] < hoverSoundCooldown)
+            {
+                return;
+            }
+            soundCooldowns[soundName] = currentTime;
             audioSource.PlayOneShot(audioClips[soundName], SFXVolume);
         }
         else
@@ -59,13 +99,14 @@ public class AudioManager : SingletonPersistant<AudioManager>
         }
     }
 
-    public void PlayMusic(string musicName)
+    public void PlayMusic(string musicName=backgroundMusicTrack)
     {
-        if (audioClips.ContainsKey(musicName))
+        if (audioClips.ContainsKey(musicName) && !musicPlaying)
         {
             musicSource.clip = audioClips[musicName];
             musicSource.volume = MusicVolume;
             musicSource.Play();
+            musicPlaying = true;
         }
         else
         {
@@ -76,6 +117,7 @@ public class AudioManager : SingletonPersistant<AudioManager>
     public void StopMusic()
     {
         musicSource.Stop();
+        musicPlaying = false;
     }
 
     public void SetSFXVolume(float volume)

@@ -6,10 +6,10 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Arena.unity
-    guid: bb7ba7ac493d1f04096848eb2f75d7c8
-  - enabled: 1
     path: Assets/Scenes/StartMenu.unity
     guid: 6f0e91e802f7551499825f516633ad58
+  - enabled: 1
+    path: Assets/Scenes/Arena.unity
+    guid: bb7ba7ac493d1f04096848eb2f75d7c8
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
